@@ -10,13 +10,13 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Discord.API.Client.Rest;
 using System.Globalization;
+using System.Collections.Concurrent;
 
 namespace AntiInvite
 {
     internal static class GlobalData
     {
         internal static readonly Regex invite = new Regex(@"discord\.gg\/(?<id>[a-zA-Z0-9\-]+)", RegexOptions.Compiled);
-        internal static bool isWatching = false;
         internal static bool verboseConsole = false;
         internal static string HhMmSs => DateTime.UtcNow.ToString("hh:mm:ss");
     }
@@ -31,6 +31,8 @@ namespace AntiInvite
             var configBuilder = new DiscordConfigBuilder { LogLevel = LogSeverity.Warning };
             var client = new DiscordClient(configBuilder);
 
+            Console.CancelKeyPress += Console_CancelKeyPress;
+
             client.ClientAPI.SendingRequest += (s, e) =>
             {
                 var request = e.Request as SendMessageRequest;
@@ -40,13 +42,23 @@ namespace AntiInvite
                 }
             };
 
-            client.MessageReceived += async (s, e) => await CommandHandler(s, e);
-            client.MessageReceived += async (s, e) => await InviteDeleter(s, e);
-
+            client.MessageReceived += async (s, e) =>
+            {
+                try
+                {
+                    await CommandHandler(s, e);
+                    await InviteDeleter(s, e);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("Oh noes, exception while handling some command: "+ ex);
+                }
+            };
+        
             client.Ready += (s, e) =>
             {
                 Console.WriteLine($"[Info] Client Logged in as {client.CurrentUser.Name}");
-                Logger.Log("[STARUP:PreClient] Bot initialized");
+                Logger.Log("[STARTUP:PreClient] Bot initialized");
                 myMention = client.CurrentUser.Mention;
             };
             client.ExecuteAndWait(async () =>
@@ -68,11 +80,18 @@ namespace AntiInvite
             });
         }
 
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            Console.WriteLine("Someone pressed CTRL+C, exitting");
+            Environment.Exit(0);
+        }
+
         static async Task InviteDeleter(object sender, MessageEventArgs e)
         {
-            if (GlobalData.isWatching && ConfigHandler.ServerData[e.Server.Id].Enabled)
+            var ServerData = ConfigHandler.ServerData.GetOrAdd(e.Server.Id, id => new ConfigHandler.ServerDataBase());
+            if (ServerData.Enabled)
             {
-                if (ConfigHandler.Config.Owner != e.User.Id && !ConfigHandler.ServerData[e.Server.Id].UsersIgnored.Contains(e.User.Id) && !ConfigHandler.ServerData[e.Server.Id].ChannelsIgnored.Contains(e.Channel.Id) && !e.User.ServerPermissions.ManageMessages)
+                if (ConfigHandler.Config.Owner != e.User.Id && !ServerData.UsersIgnored.Contains(e.User.Id) && !ServerData.ChannelsIgnored.Contains(e.Channel.Id) && !e.User.ServerPermissions.ManageMessages)
                 {
                     Match match = GlobalData.invite.Match(e.Message.Text.Replace("discordapp.com/invite", "discord.gg"));
                     if (!match.Success)
@@ -85,24 +104,24 @@ namespace AntiInvite
                         Logger.Log("[INVITE:Detected] Invite Detected, " + e.Server.Name + "/" + e.Channel.Name + " - " + e.User.Name + " " + match.ToString());
                         await e.Message.Delete();
 
-                        if (ConfigHandler.ServerData[e.Server.Id].IncidentTracker[e.User.Id].MessageCounter%5 == 0)
+                        if (ServerData.IncidentTracker[e.User.Id].MessageCounter%5 == 0)
                         {
-                            if (ConfigHandler.ServerData[e.Server.Id].IncidentTracker[e.User.Id].ResponseCounter + 1 > ConfigHandler.ServerData[e.Server.Id].BanAfter)
+                            if (ServerData.IncidentTracker[e.User.Id].ResponseCounter + 1 > ServerData.BanAfter)
                             {
                                 await e.Server.Ban(e.User);
                                 Logger.Log("[ACTION:Ban] " + e.User.Name + "/" + e.User.Id + " was banned on " + e.Server.Name);
                                 return;
                             }
-                            if (ConfigHandler.ServerData[e.Server.Id].IncidentTracker[e.User.Id].ResponseCounter + 1 > ConfigHandler.ServerData[e.Server.Id].KickAfter)
+                            if (ServerData.IncidentTracker[e.User.Id].ResponseCounter + 1 > ServerData.KickAfter)
                             {
                                 await e.User.Kick();
                                 Logger.Log("[ACTION:Kick] " + e.User.Name + "/" + e.User.Id + " was kicked on " + e.Server.Name);
                                 return;
                             }
-                            await Reply(e, ConfigHandler.ServerData[e.Server.Id].Message);
-                            ConfigHandler.ServerData[e.Server.Id].IncidentTracker[e.User.Id].ResponseCounter++;
+                            await Reply(e, ServerData.Message);
+                            ServerData.IncidentTracker[e.User.Id].ResponseCounter++;
                         }
-                        ConfigHandler.ServerData[e.Server.Id].IncidentTracker[e.User.Id].MessageCounter++;
+                        ServerData.IncidentTracker[e.User.Id].MessageCounter++;
                     }
                 }
             }
@@ -120,22 +139,23 @@ namespace AntiInvite
 
                 if (ConfigHandler.Config.Owner == e.User.Id)
                 {
+                    var ServerData = ConfigHandler.ServerData.GetOrAdd(e.Server.Id, id => new ConfigHandler.ServerDataBase());
                     switch (commandName)
                     {
                         case "debug":
                             List<string> usersIgnored = new List<string>();
-                            foreach (var u in ConfigHandler.ServerData[e.Server.Id].UsersIgnored)
+                            foreach (var u in ServerData.UsersIgnored)
                             {
                                 string username = e.Server.GetUser(u).Name;
                                 string user = username + " " + u.ToString();
                                 usersIgnored.Add(user);
                             }
                             string response = "__Users Ignored in Server__" + "\n" + String.Join("\n", usersIgnored);
-                            if (ConfigHandler.ServerData[e.Server.Id].ChannelsIgnored.Contains(e.Channel.Id))
+                            if (ServerData.ChannelsIgnored.Contains(e.Channel.Id))
                                 response = "__Channel is ignored__\n\n" + response;
 
                             string statusOfServerWatching = "";
-                            if (ConfigHandler.ServerData[e.Server.Id].Enabled)
+                            if (ServerData.Enabled)
                                 statusOfServerWatching = "Enabled";
                             else
                                 statusOfServerWatching = "Disabled";
@@ -152,14 +172,15 @@ namespace AntiInvite
                 }
 
 
-                if (ConfigHandler.Config.Owner == e.User.Id || e.Server.Owner == e.User || e.User.ServerPermissions.ManageRoles)
+                if (ConfigHandler.Config.Owner == e.User.Id || e.User.ServerPermissions.ManageRoles)
                 {
+                    var ServerData = ConfigHandler.ServerData.GetOrAdd(e.Server.Id, id => new ConfigHandler.ServerDataBase());
                     switch (commandName)
                     {
                         case "ignore-channel":
-                            if (!ConfigHandler.ServerData[e.Server.Id].ChannelsIgnored.Contains(e.Channel.Id))
+                            if (ServerData.ChannelsIgnored.Contains(e.Channel.Id))
                             {
-                                ConfigHandler.ServerData[e.Server.Id].ChannelsIgnored.Add(e.Channel.Id);
+                                ServerData.ChannelsIgnored.Add(e.Channel.Id);
                                 await Reply(e, "Channel added to Ignore List!");
                                 Logger.Log("[ACTION:Ignore] " + e.Channel.Name + " was ignored on " + e.Server.Name);
                                 ConfigHandler.SaveServerData();
@@ -169,21 +190,23 @@ namespace AntiInvite
                             break;
                         case "ignore-users":
                             if (!e.Message.MentionedUsers.Any())
+                            {
                                 await Reply(e, "Please specify, using mentions, users to add to the Ignore List");
-
+                                return;
+                            }
                             List<string> responseMessages = new List<string>();
                             List<string> users = new List<string>();
                             foreach (var user in e.Message.MentionedUsers)
                             {
                                 if (user.Id != e.Channel.Client.CurrentUser.Id)
                                 {
-                                    if (ConfigHandler.ServerData[e.Server.Id].UsersIgnored.Contains(user.Id))
+                                    if (ServerData.UsersIgnored.Contains(user.Id))
                                     {
                                         responseMessages.Add($"{user.Name} was already on the Ignore List!");
                                     }
                                     else
                                     {
-                                        ConfigHandler.ServerData[e.Server.Id].UsersIgnored.Add(user.Id);
+                                        ServerData.UsersIgnored.Add(user.Id);
                                         responseMessages.Add($"{user.Name} was added to the Ignore List!");
                                         users.Add(user.Name);
                                     }
@@ -196,21 +219,21 @@ namespace AntiInvite
                             break;
                         case "toggle-monitoring":
                             string Toggle;
-                            if (ConfigHandler.ServerData[e.Server.Id].Enabled)
+                            if (ServerData.Enabled)
                             {
-                                ConfigHandler.ServerData[e.Server.Id].Enabled = false;
+                                ServerData.Enabled = false;
                                 Toggle = "OFF";
                             }
                             else
                             {
-                                ConfigHandler.ServerData[e.Server.Id].Enabled = true;
+                                ServerData.Enabled = true;
                                 Toggle = "ON";
                             }
                             Logger.Log("[SETTINGS-Server:WatchingToggle] " + e.User.Name + " turned the Invite Monitoring <" + Toggle);
                             ConfigHandler.SaveServerData();
                             break;
                         case "set-message":
-                            ConfigHandler.ServerData[e.Server.Id].Message = messageSplit.Skip(1).ToString();
+                            ServerData.Message = messageSplit.Skip(1).ToString();
                             Logger.Log("[SETTINGS-Server:WarningMessage] " + e.User.Name + " set the warning message on " + e.Server.Name + " to " + messageSplit.Skip(1).ToString());
                             ConfigHandler.SaveServerData();
                             break;
@@ -218,7 +241,7 @@ namespace AntiInvite
                             short kickAfter;
                             if (short.TryParse(messageSplit[2], out kickAfter))
                             {
-                                ConfigHandler.ServerData[e.Server.Id].KickAfter = kickAfter;
+                                ServerData.KickAfter = kickAfter;
                                 ConfigHandler.SaveServerData();
                                 Logger.Log("[SETTINGS-Server:KickAfter] " + e.User.Name + " set the kickAfter on " + e.Server.Name + " to " + kickAfter);
                                 await Reply(e, "Bot will now kick after giving " + kickAfter + "warnings.");
@@ -230,7 +253,7 @@ namespace AntiInvite
                             short banAfter;
                             if (short.TryParse(messageSplit[2], out banAfter))
                             {
-                                ConfigHandler.ServerData[e.Server.Id].BanAfter = banAfter;
+                                ServerData.BanAfter = banAfter;
                                 ConfigHandler.SaveServerData();
                                 Logger.Log("[SETTINGS-Server:BanAfter] " + e.User.Name + " set the BanAfter on " + e.Server.Name + " to " + banAfter);
                                 await Reply(e, "Bot will now kick after giving " + banAfter + "warnings.");
@@ -262,7 +285,7 @@ namespace AntiInvite
         static class ConfigHandler
         {
             public static ConfigBase Config = new ConfigBase();
-            public static Dictionary<ulong, ServerDataBase> ServerData = new Dictionary<ulong, ServerDataBase>();
+            public static ConcurrentDictionary<ulong, ServerDataBase> ServerData = new ConcurrentDictionary<ulong, ServerDataBase>();
 
             static string Time => DateTime.UtcNow.ToString("yy-MM-dd hh:mm:ss");
 
@@ -287,7 +310,7 @@ namespace AntiInvite
             {
                 try
                 {
-                    ServerData = JsonConvert.DeserializeObject<Dictionary<ulong, ServerDataBase>>(File.ReadAllText("Settings/serverData.json"));
+                    ServerData = JsonConvert.DeserializeObject<ConcurrentDictionary<ulong, ServerDataBase>>(File.ReadAllText("Settings/serverData.json"));
                     return true;
                 }
                 catch (Exception ex)
@@ -373,20 +396,27 @@ namespace AntiInvite
     }
     static class Logger
     {
-        static StreamWriter LoggerStream = new StreamWriter(new FileStream("Logs\\temp2.txt", FileMode.Append));
-
-        static readonly object LoggerLock = new object();
+        private static readonly object LoggerLock = new object();
 
         public static void Log(string logMessage, params object[] args)
         {
-            string ToBeLogged = "[" + GlobalData.HhMmSs + "] " + logMessage;
-            lock (LoggerLock)
-                LoggerStream.Write(string.Format(ToBeLogged, args));
+            string toBeLogged = $"[{GlobalData.HhMmSs}] {logMessage}";
+            using (StreamWriter writer = new StreamWriter(new FileStream(LogsPath(), FileMode.Append)))
+            {
+                lock (LoggerLock)
+                  writer.WriteLine(toBeLogged);
+            }
+            Console.WriteLine(toBeLogged);
         }
 
-        private static string BotLogsPaths()
+        private static string LogsPath()
         {
-            return Path.Combine("Logs", "temp.txt");
+            const string logsDir = "logs";
+            var file = DateTime.UtcNow.Date.ToString("yyyy-MM-dd") + ".txt";
+            var path = Path.Combine(logsDir, file);
+            if (!Directory.Exists(logsDir))
+                Directory.CreateDirectory(logsDir);
+            return path;
         }
     }
 }
