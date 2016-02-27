@@ -373,7 +373,7 @@ namespace AntiInvite
     }
     static class Logger
     {
-        static StreamWriter LoggerStream = new StreamWriter(new FileStream(BotLogsPaths(), FileMode.Append));
+        static StreamWriter LoggerStream = new StreamWriter(new FileStream("Logs\\temp2.txt", FileMode.Append));
 
         static readonly object LoggerLock = new object();
 
@@ -386,7 +386,7 @@ namespace AntiInvite
 
         private static string BotLogsPaths()
         {
-            return Path.Combine("logs", DateTime.UtcNow.Date.ToShortDateString());
+            return Path.Combine("Logs", "temp.txt");
         }
     }
 }
