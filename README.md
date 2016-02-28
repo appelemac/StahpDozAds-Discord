@@ -1,4 +1,4 @@
 # AntiInvite-Discord
 Anti-Invite Bot for Discord, based on Discord.Net
 
-**_Currently In Active Development, All Branches Unstable_**
+*This bot is a W.I.P. but should be stable. Code is ugly and stuff.*
