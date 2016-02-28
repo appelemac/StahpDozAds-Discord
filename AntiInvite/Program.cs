@@ -3,13 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Discord.API.Client.Rest;
-using System.Globalization;
 using System.Collections.Concurrent;
 using System.Timers;
 
@@ -21,6 +18,7 @@ namespace AntiInvite
         internal static bool IsReady = false;
         internal static bool VerboseConsole = true;
         internal static string HhMmSs => DateTime.UtcNow.ToString("hh:mm:ss");
+        internal static string HelpMessage = "```\nStahpDozAds - the Dev-Hosted instance of Khio's AntiInvite Bot:\nhttps://github.com/khionu/AntiInvite-Discord\n\n    Bot Prefix is to Mention the bot, for example, \"@StahpDozAds ignore - channel\"\n    Warnings are issued every 5 invites per user per server\n\ntoggle-watching\n        Turns on whether the bot watches for invites\nignore-channel\n        Adds the channel that the command was ran in to the Ignore List\nignore-users @Mention\n        Adds all mentioned users to the Ignore List\nresume-channel\n        Removes the channel from the Ignore List\nresume-users @Mention\n        Removes all mentioned users from the Ignore List\nclean\n        Searches through the last 40 messages, and deletes those that belong to the bot (Alias: clear)\nset-message\n        Sets the message the bot uses for a warning\ntoggle-ban\n        Toggles whether the bot tries to ban after so many warnings (default is 8)\ntoggle-kick\n        Toggles whether the bot tries to kick after so many warnings (default is 4)\nset-banafter\n        Sets the number of warnings the bot gives before banning\nset-kickafter\n        Sets the number of warnings the bot gives before kicking\nleave\n        Makes the bot leave the server.\nleave-forever\n        Same as Leave, but the Server Owner must reinvite\n\nIgnore List, Set Message, BanAfter, and KickAfter commands need Manage Roles to be ran (being Owner grants Manage Roles automatically)\nClean needs Manage Messages\nLeave and Leave-Forever need the Server Owner\n\nTo contact the Developer, ping Khio on the Discord Bots server:\nhttps://discord.gg/0cDvIgU2voWn4BaD\n```";
     }
 
     class Program
@@ -29,8 +27,8 @@ namespace AntiInvite
 
         static void Main(string[] args)
         {
-            try
-            {
+            //try
+            //{
                 Logger.Log("[STARTUP:Login] Bot Initializing");
                 var configBuilder = new DiscordConfigBuilder { LogLevel = LogSeverity.Warning };
                 var client = new DiscordClient(configBuilder);
@@ -65,7 +63,7 @@ namespace AntiInvite
 
                 client.JoinedServer += async (s, e) =>
                 {
-                    await e.Server.Owner.SendMessage($"Hi, I just joined your server {e.Server.Name}!\n\nI am a bot designed to prevent people from advertising invites. I have a handful of features to help accomplish this. Say \"Help\" here to get a list of commands and information on how to best use me.\n\nIf you do not activate me, I will leave your server in 3 days. If you want to remove me now, simply run, from where this bot can see it in your server, \"leave\". If you want me to not accept invites to your server ever again, run \"leave-forever\". If you use \"leave-forever\" I will only be able to come back if *you* DM me the invite.\n\nIf you need assistance, you can find my Developer, Khio, in the Discord Bots Server/nhttps://discord.gg/0cDvIgU2voWn4BaD");
+                        await e.Server.Owner.SendMessage($"Hi, I just joined your server {e.Server.Name}!\n\nI am a bot designed to prevent people from advertising invites. I have a handful of features to help accomplish this. Say \"Help\" here to get a list of commands and information on how to best use me.\n\nIf you do not activate me, I will leave your server in 3 days. If you want to remove me now, simply run, from where this bot can see it in your server, \"leave\". If you want me to not accept invites to your server ever again, run \"leave-forever\". If you use \"leave-forever\" I will only be able to come back if *you* DM me the invite.\n\nIf you need assistance, you can find my Developer, Khio, in the Discord Bots Server/nhttps://discord.gg/0cDvIgU2voWn4BaD");
                 };
 
                 client.Ready += (s, e) =>
@@ -94,11 +92,10 @@ namespace AntiInvite
                 });
                 var EveryHour = new Timer(60 * 60 * 1000);
                 EveryHour.Elapsed += new ElapsedEventHandler((s, e) => Expire(s, e, client));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.StackTrace);
-            }
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine(ex.StackTrace);
+            //}
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -116,7 +113,7 @@ namespace AntiInvite
             var IncidentData = ServerData.IncidentTracker.GetOrAdd(e.User.Id, id => new ConfigHandler.IncidentData());
             if (ServerData.Enabled)
             {
-                if (ConfigHandler.config.Owner != e.User.Id && !ServerData.UsersIgnored.Contains(e.User.Id) && !ServerData.ChannelsIgnored.Contains(e.Channel.Id) && !e.User.ServerPermissions.ManageMessages)
+                if (!ServerData.UsersIgnored.Contains(e.User.Id) && !ServerData.ChannelsIgnored.Contains(e.Channel.Id))
                 {
                     if (e.Message.RawText.Contains("discord.gg") || e.Message.RawText.Contains("discordapp.com/invite"))
                     {
@@ -160,6 +157,13 @@ namespace AntiInvite
 
                 string commandName = messageSplit[1].Trim().ToLower();
 
+                switch (commandName)
+                {
+                    case "help":
+                        await e.User.SendMessage(GlobalData.HelpMessage);
+                        break;
+                }
+
                 if (ConfigHandler.config.Owner == e.User.Id)
                 {
                     ulong serverID = 0;
@@ -197,12 +201,14 @@ namespace AntiInvite
                             var BlacklistObject = ConfigHandler.ServerBlacklist[serverID];
                             BlacklistObject.Dead = true;
                             BlacklistObject.DeadReason = string.Join(" ", messageSplit.Skip(2));
+                            ConfigHandler.SaveServerBlacklist();
                             break;
                         case "del-blacklist":
                             ulong.TryParse(messageSplit[2], out serverID);
                             var FormerBlacklistObject = ConfigHandler.ServerBlacklist[serverID];
                             FormerBlacklistObject.Dead = false;
                             FormerBlacklistObject.DeadReason = "";
+                            ConfigHandler.SaveServerBlacklist();
                             break;
                     }
                 }
@@ -391,12 +397,16 @@ namespace AntiInvite
                     {
                         case "leave":
                             await Reply(e, "So long!");
+                            await Task.Delay(2000);
                             await e.Server.Leave();
+                            Logger.Log($"[SERVER-LEAVE] {e.Server.Name} was left on {e.User.Name}'s command");
                             break;
                         case "leave-forever":
                             ConfigHandler.ServerBlacklist[e.Server.Id].OwnerID = e.Server.Owner.Id;
                             await Reply(e, "So long!");
+                            await Task.Delay(2000);
                             await e.Server.Leave();
+                            Logger.Log($"[SERVER-LEAVE] {e.Server.Name} permanently left on {e.User.Name}'s command");
                             break;
                     }
                 }
@@ -424,6 +434,7 @@ namespace AntiInvite
                     if (BlacklistObject.Dead)
                     {
                         await e.Channel.SendMessage($":warning: This server has been added to the Blacklist!! Reason: \"{BlacklistObject.DeadReason}\"");
+                        Logger.Log($"[INVITE-DeadList] {invite.Server.Name} was attempted to be invited");
                         return;
                     }
                     if (e.User.Id != ConfigHandler.ServerBlacklist[invite.Server.Id].OwnerID)
@@ -433,8 +444,8 @@ namespace AntiInvite
                     }
                 }
                 await invite.Accept();
-                await Task.Delay(2000);
                 await e.Channel.SendMessage($"I have accepted your invite to the server \"{invite.Server.Name}\"");
+                Logger.Log($"[INVITE-Accept] Bot as joined `{invite.Server.Name}` at `{e.User.Name}`s request");
             }
         }
 
@@ -445,7 +456,7 @@ namespace AntiInvite
             var messageSplit = e.Message.RawText.Split(' ');
             if (messageSplit[0].ToLower() == "help")
             {
-                await e.Channel.SendMessage("```\nStahpDozAds - the Dev-Hosted instance of Khio's AntiInvite Bot:\nhttps://github.com/khionu/AntiInvite-Discord\n\n    Bot Prefix is to Mention the bot, for example, \"@StahpDozAds ignore - channel\"\n    Warnings are issued every 5 invites per user per server\n\ntoggle-watching\n        Turns on whether the bot watches for invites\nignore-channel\n        Adds the channel that the command was ran in to the Ignore List\nignore-users @Mention\n        Adds all mentioned users to the Ignore List\nresume-channel\n        Removes the channel from the Ignore List\nresume-users @Mention\n        Removes all mentioned users from the Ignore List\nclean\n        Searches through the last 40 messages, and deletes those that belong to the bot (Alias: clear)\nset-message\n        Sets the message the bot uses for a warning\ntoggle-ban\n        Toggles whether the bot tries to ban after so many warnings (default is 8)\ntoggle-kick\n        Toggles whether the bot tries to kick after so many warnings (default is 4)\nset-banafter\n        Sets the number of warnings the bot gives before banning\nset-kickafter\n        Sets the number of warnings the bot gives before kicking\nleave\n        Makes the bot leave the server.\nleave-forever\n        Same as Leave, but the Server Owner must reinvite\n\nIgnore List, Set Message, BanAfter, and KickAfter commands need Manage Roles to be ran (being Owner grants Manage Roles automatically)\nClean needs Manage Messages\nLeave and Leave-Forever need the Server Owner\n\nTo contact the Developer, ping Khio on the Discord Bots server:\nhttps://discord.gg/0cDvIgU2voWn4BaD\n```");
+                await e.Channel.SendMessage(GlobalData.HelpMessage);
             }
         }
 
