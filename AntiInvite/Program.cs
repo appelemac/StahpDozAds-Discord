@@ -68,6 +68,11 @@ namespace StahpDozAds
                 await e.Server.Owner.SendMessage($"Hi, I just joined your server {e.Server.Name}!\n\nI am a bot designed to prevent people from advertising invites. I have a handful of features to help accomplish this. Say \"Help\" here to get a list of commands and information on how to best use me.\n\nIf you do not activate me, I will leave your server in 3 days. If you want to remove me now, simply run, from where this bot can see it in your server, \"leave\". If you want me to not accept invites to your server ever again, run \"leave-forever\". If you use \"leave-forever\" I will only be able to come back if *you* DM me the invite.\n\nIf you need assistance, you can find my Developer, Khio, in the Discord Bots Server\nhttps://discord.gg/0cDvIgU2voWn4BaD");
             };
 
+            client.LeftServer += (s, e) =>
+            {
+                Logger.Log($"Bot has been removed from {e.Server.Name}");
+            };
+
             client.Ready += (s, e) =>
             {
                 Console.WriteLine($"[Info] Client Logged in as {client.CurrentUser.Name}");
