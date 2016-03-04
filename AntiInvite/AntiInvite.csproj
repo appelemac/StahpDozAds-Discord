@@ -7,8 +7,8 @@
     <ProjectGuid>{954F846F-C5FF-48C3-9DC3-9967E625C62B}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>StahpDozAds</RootNamespace>
-    <AssemblyName>StahpDozAds</AssemblyName>
+    <RootNamespace>AntiInvite</RootNamespace>
+    <AssemblyName>AntiInvite</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -49,10 +49,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Discord.Net">
-      <HintPath>..\..\Discord.Net\src\Discord.Net.Net45\bin\Debug\Discord.Net.dll</HintPath>
+      <HintPath>..\..\..\..\..\Source\Repos\Discord.Net\src\Discord.Net.Net45\bin\Debug\Discord.Net.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\Discord.Net\src\Discord.Net.Net45\bin\Debug\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\..\..\Source\Repos\Discord.Net\src\Discord.Net.Net45\bin\Debug\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
