@@ -9,9 +9,10 @@ using Newtonsoft.Json;
 using Discord.API.Client.Rest;
 using System.Collections.Concurrent;
 using System.Timers;
+using System.Diagnostics;
 using System.Text;
 
-namespace StahpDozAds
+namespace AntiInvite
 {
     internal static class GlobalData
     {
@@ -292,7 +293,7 @@ namespace StahpDozAds
                             {
                                 ServerData.ChannelsIgnored.Add(e.Channel.Id);
                                 await Reply(e, "Channel added to Ignore List!");
-                                Logger.Log($"[UTILITY ] `{e.Channel.Name}` was ignored on `{e.Server.Name}` by `{e.User.Name}`");
+                                Logger.Log($"[UTILITY ] `{e.Channel.Name}` was ignored on `{e.Server.Name}`");
                             }
                             else
                                 await Reply(e, "This channel is already ignored!");
@@ -302,7 +303,7 @@ namespace StahpDozAds
                             {
                                 ServerData.ChannelsIgnored.Remove(e.Channel.Id);
                                 await Reply(e, "Channel removed from Ignore List!");
-                                Logger.Log($"[UTILITY ] `{e.Channel.Name}` was resumed on `{e.Server.Name}` by `{e.User.Name}`");
+                                Logger.Log($"[UTILITY ] `{e.Channel.Name}` was resumed on `{e.Server.Name}`");
                             }
                             else
                                 await Reply(e, "This channel is not ignored!");
@@ -333,7 +334,7 @@ namespace StahpDozAds
                             }
 
                             await Reply(e, " " + string.Join("\n", responseMessages));
-                            Logger.Log($"[UTILITY ] Users ignored on `{e.Server.Name}` by `{e.User.Name}` - " + string.Join(" | ", users));
+                            Logger.Log($"[UTILITY ] Users ignored on `{e.Server.Name}` - " + string.Join(" | ", users));
                             break;
                         case "resume-users":
                             if (!e.Message.MentionedUsers.Any())
@@ -361,7 +362,7 @@ namespace StahpDozAds
                             }
 
                             await Reply(e, " " + string.Join("\n", responseMessages2)); 
-                            Logger.Log($"[UTILITY ] Users resumed on `{e.Server.Name}` by `{e.User.Name}` - " + string.Join(" | ", users2));
+                            Logger.Log($"[UTILITY ] Users resumed on `{e.Server.Name}` - " + string.Join(" | ", users2));
                             break;
                         case "ignore-roles":
                             int count_IgnoreRoles = 0;
@@ -398,7 +399,7 @@ namespace StahpDozAds
                                     response += $" These roles either do not exist, or were not an exclusive match to any roles: `{FailedRoles}`";
                                 }
                                 await Reply(e, response);
-                                Logger.Log($"[UTILITY ] Roles ignored on `{e.Server.Name}` by `{e.User.Name}` - " + string.Join(" | ", RolesToBeAdded_names));
+                                Logger.Log($"[UTILITY ] Roles ignored on `{e.Server.Name}` - " + string.Join(" | ", RolesToBeAdded_names));
                             }
                             break;
                         case "resume-roles":
@@ -436,7 +437,7 @@ namespace StahpDozAds
                                     response += $" These roles either do not exist, or were not an exclusive match to any roles: `{FailedRoles}`";
                                 }
                                 await Reply(e, response);
-                                Logger.Log($"[UTILITY ] Roles resumed on `{e.Server.Name}` by `{e.User.Name}` - " + string.Join(" | ", RolesToBeRemoved_names));
+                                Logger.Log($"[UTILITY ] Roles resumed on `{e.Server.Name}` - " + string.Join(" | ", RolesToBeRemoved_names));
                             }
                             break;
                         case "toggle-watching":
