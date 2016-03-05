@@ -356,7 +356,7 @@ namespace AntiInvite
                                 }
                             }
 
-                            await Reply(e, " " + string.Join("\n", responseMessages2)); 
+                            await Reply(e, " " + string.Join("\n", responseMessages2));
                             Logger.Log($"[UTILITY ] Users resumed on `{e.Server.Name}` - " + string.Join(" | ", users2));
                             break;
                         case "ignore-roles":
@@ -373,8 +373,8 @@ namespace AntiInvite
                                 HashSet<ulong> RolesToBeAdded = new HashSet<ulong>();
                                 HashSet<string> RolesToBeAdded_names = new HashSet<string>();
                                 HashSet<string> RolesThatFailed = new HashSet<string>();
-                                
-                                for(int iIR = 0; iIR < BacktickArgs.Count(); iIR++)
+
+                                for (int iIR = 0; iIR < BacktickArgs.Count(); iIR++)
                                 {
                                     var roles = e.Server.FindRoles(BacktickArgs[iIR], true).ToArray();
                                     if (roles.Length > 1 || roles.Length == 0)
@@ -385,7 +385,7 @@ namespace AntiInvite
                                         RolesToBeAdded_names.Add(roles[0].Name);
                                     }
                                 }
-                                foreach(var rIR in RolesToBeAdded)
+                                foreach (var rIR in RolesToBeAdded)
                                     ServerData.RolesIgnored.Add(rIR);
                                 string response = $"{RolesToBeAdded.Count} roles were added to the ignore list.";
                                 if (RolesThatFailed.Any())
@@ -544,7 +544,7 @@ namespace AntiInvite
                             break;
                         case "toggle-global":
                             string ToggleGlobalSub;
-                            if(ServerData.GlobalSubscribed)
+                            if (ServerData.GlobalSubscribed)
                             {
                                 ServerData.GlobalSubscribed = false;
                                 ToggleGlobalSub = "OFF";
