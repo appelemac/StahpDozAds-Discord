@@ -9,7 +9,6 @@ using Newtonsoft.Json;
 using Discord.API.Client.Rest;
 using System.Collections.Concurrent;
 using System.Timers;
-using System.Diagnostics;
 using System.Text;
 
 namespace AntiInvite
@@ -20,8 +19,8 @@ namespace AntiInvite
         internal static readonly Regex args = new Regex(@"(\`(?<args>.*?)\`)", RegexOptions.Compiled);
         internal static bool IsReady = false;
         internal static bool VerboseConsole = false;
-        internal static string HhMmSs => DateTime.UtcNow.ToString("hh:mm:ss");
-        internal static string HelpMessage = "🚫 StahpDozAds 🚫\nAn AntiAdvertisement bot by <@96642168176807936>(Khionu Terabite)\n\nFull documentation can be found on his GitHub Wiki:\nhttps://github.com/khionu/StahpDozAds-Discord/wiki\n\nIf you need support, you can find Khio on the Discord Bots Server\nhttps://discord.gg/0cDvIgU2voWn4BaD";
+        internal static string HhMmSs => DateTime.UtcNow.ToString("HH:mm:ss");
+        internal static string HelpMessage = "🚫 StahpDozAds 🚫\nAn AntiAdvertisement bot by <@96642168176807936>(Khionu Terabite)\n\nFull documentation can be found on his GitHub Wiki:\nhttps://github.com/khionu/StahpDozAds-Discord/wiki\n\nIf you need support, you can find Khio on the Official StahpDozAds Server\nhttps://discord.gg/0ryvxZwoxSNKfWL7";
     }
 
     class Program
@@ -242,7 +241,7 @@ namespace AntiInvite
                                 }
                             }
 
-                            await Reply(e, " " + string.Join("\n", responseMessages));
+                            await Reply(e, "\n" + string.Join("\n", responseMessages));
                             Logger.Log($"[GLOBLUTL] Users ignored Globally - " + string.Join(" | ", users));
                             break;
                         case "global-resume":
@@ -264,7 +263,7 @@ namespace AntiInvite
                                     }
                                 }
                             }
-                            await Reply(e, " " + string.Join("\n", responseMessages2));
+                            await Reply(e, "\n" + string.Join("\n", responseMessages2));
                             Logger.Log($"[GLOBLUTL] Users resumed Globally - " + string.Join(" | ", users2));
                             break;
                         case "forcesave":
@@ -328,7 +327,7 @@ namespace AntiInvite
                                 }
                             }
 
-                            await Reply(e, " " + string.Join("\n", responseMessages));
+                            await Reply(e, "\n" + string.Join("\n", responseMessages));
                             Logger.Log($"[UTILITY ] Users ignored on `{e.Server.Name}` - " + string.Join(" | ", users));
                             break;
                         case "resume-users":
@@ -356,7 +355,7 @@ namespace AntiInvite
                                 }
                             }
 
-                            await Reply(e, " " + string.Join("\n", responseMessages2));
+                            await Reply(e, "\n" + string.Join("\n", responseMessages2));
                             Logger.Log($"[UTILITY ] Users resumed on `{e.Server.Name}` - " + string.Join(" | ", users2));
                             break;
                         case "ignore-roles":
@@ -474,7 +473,7 @@ namespace AntiInvite
                             {
                                 ServerData.BanAfter = banAfter;
                                 Logger.Log($"[UTILITY ] `{e.User.Name}` set the BanAfter on `{e.Server.Name}` to `{banAfter}`");
-                                await Reply(e, $"Bot will now kick after giving {banAfter} warnings.");
+                                await Reply(e, $"Bot will now ban after giving {banAfter} warnings.");
                             }
                             else
                                 await Reply(e, $"Error!! `{messageSplit[2]}` is not a valid parameter! Please give a number.");
@@ -643,7 +642,7 @@ namespace AntiInvite
 
         static async Task<Message> Reply(MessageEventArgs e, string reply)
         {
-            return await e.Channel.SendMessage(e.User.Mention + "," + reply);
+            return await e.Channel.SendMessage(e.User.Mention + ", " + reply);
         }
 
         public static async void Clean(MessageEventArgs e)
@@ -844,6 +843,7 @@ namespace AntiInvite
         }
 
     }
+
     static class Logger
     {
         private static readonly object LoggerLock = new object();
